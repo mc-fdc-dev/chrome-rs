@@ -11,16 +11,23 @@ use base64::{
     Engine as _,
     engine::{self, general_purpose}
 };
+use serde::{Deserialize, Serialize};
 
 pub struct Page {
     ws: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     uri: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct PageResponse {
     id: u64,
     result: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PageRequest {
+    command: String,
+    parameters: serde_json::Value,
 }
 
 impl Page {
@@ -34,6 +41,12 @@ impl Page {
     pub async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let (ws_stream, _) = connect_async(self.uri.clone()).await?;
         self.ws = Some(ws_stream);
+        Ok(())
+    }
+
+    async fn send(&self, page_request: PageRequest) -> Result<(), Box<dyn std::error::Error>> {
+        let data = serde_json::to_string(&page_request)?;
+        self.ws.as_mut().unwrap().send(msg).await?;
         Ok(())
     }
 
